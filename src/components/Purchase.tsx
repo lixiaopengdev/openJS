@@ -57,8 +57,8 @@ export const Purchase = () => {
               付费使用
             </h3>
             <p className="mt-6 text-base leading-7 text-gray-600">
-              OpenGPT 项目需要负担高昂的服务器成本和 OpenAI API 成本，如果
-              OpenGPT 有帮助到您，请考虑付费使用。
+              JS 项目需要负担高昂的服务器成本和 OpenAI API 成本，如果
+              JS 有帮助到您，请考虑付费使用。
             </p>
             <div className="mt-10 flex items-center gap-x-4">
               <h4 className="flex-none text-sm font-semibold leading-6 text-indigo-600">

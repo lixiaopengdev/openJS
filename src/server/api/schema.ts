@@ -1,9 +1,19 @@
-import { z } from 'zod'
+import { string, z } from 'zod'
 
 export const createAppSchema = z.object({
-  icon: z.string().emoji(),
-  name: z.string().min(1),
+  coverImage: z.string().min(0),
+  title: z.string().min(1),
   description: z.string().min(1),
   demoInput: z.string().min(1),
   prompt: z.string().min(1),
+  filePath: z.string().min(0),
+})
+
+export const formSchema = z.object({
+  title: z.string().min(1),
+  description: z.string().min(1),
+  demoInput: z.string().min(1),
+  prompt: z.string().min(1),
+  fileData: z.any(),
+  imageData: z.any(),
 })

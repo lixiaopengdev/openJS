@@ -11,11 +11,19 @@ import type { GetStaticProps, InferGetServerSidePropsType } from 'next'
 import * as R from 'ramda'
 import { useState } from 'react'
 
+import { Container } from '@/components/Container'
+import { SITE_DESC } from '@/utils/constants'
+import { HandPointer } from '@/components/HandPointer'
+import { PlusCircleIcon } from '@heroicons/react/24/outline'
+import { toast } from 'react-hot-toast'
+import { deleteFile } from '@/server/manager'
+
 type App = {
   id: string
-  name: string
+  title: string
   description: string
-  icon: string
+  coverImage: string
+  filePath: string
 }
 type PageProps = { apps: App[] }
 
@@ -35,13 +43,16 @@ const Home = (props: InferGetServerSidePropsType<typeof getStaticProps>) => {
   const { apps } = props
   const [searchValue, setSearchValue] = useState('')
   const [sizeToShow, setSizeToShow] = useState(100)
-
+  const [showCount, setShowCount] = useState(apps.length)
+  const handleListChange = (num: any) => {
+    setShowCount(num);
+  }
   const list = searchValue
     ? apps.filter(
-        (app) =>
-          app.name.includes(searchValue) ||
-          app.description.includes(searchValue)
-      )
+      (app) =>
+        app.title.includes(searchValue) ||
+        app.description.includes(searchValue)
+    )
     : apps
 
   const handleShowMore = () => {
@@ -52,18 +63,32 @@ const Home = (props: InferGetServerSidePropsType<typeof getStaticProps>) => {
     <>
       <Header />
       <main>
-        <Hero />
-        <div className="w-full bg-slate-50 pb-20 pt-10">
+        {/* <Hero /> */}
+        <div className="w-full bg-slate-50 pb-2 pt-10">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div className="mb-10 grid grid-cols-1 items-center justify-between pt-10 sm:grid-cols-3 sm:pt-0 ">
               <div />
               <SearchInput
                 setSearchValue={setSearchValue}
-                placeholder={`Search ${apps.length} apps...`}
+                placeholder={`Search ${showCount} apps...`}
               />
+              <div className="text-center">
+                <Button
+                  variant="solid"
+                  color="blue"
+                  href="/app/new"
+                  className="relative"
+                >
+                  <div className="flex items-center gap-2">
+                    <PlusCircleIcon className="h-6 w-6"></PlusCircleIcon>
+                    <span className="mr-0.5 whitespace-nowrap">上传脚本</span>
+                  </div>
+                </Button>
+              </div >
               <div />
+
             </div>
-            <AppList list={R.take(sizeToShow, list)} />
+            <AppList list={R.take(sizeToShow, list)} onListChange={handleListChange} />
 
             <div className="mt-10 flex justify-center">
               <Button color="blue" onClick={handleShowMore}>
@@ -74,7 +99,7 @@ const Home = (props: InferGetServerSidePropsType<typeof getStaticProps>) => {
         </div>
         {/* <PrimaryFeatures /> */}
         {/* <SecondaryFeatures /> */}
-        <CallToAction />
+        {/* <CallToAction /> */}
         {/* <Testimonials /> */}
         {/* <Pricing /> */}
         {/* <Faqs /> */}

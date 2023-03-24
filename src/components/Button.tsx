@@ -34,7 +34,7 @@ export interface ButtonProps {
   color?: 'slate' | 'blue' | 'white'
   onClick?: MouseEventHandler<any>
   type?: 'submit' | 'reset' | 'button'
-  loading?: boolean
+  loading?: string
   disabled?: boolean
   href?: string
   target?: string

@@ -1,9 +1,9 @@
 import { Breadcrumb } from '@/components/Breadcrumb'
 import { Button } from '@/components/Button'
-import { EmojiField } from '@/components/EmojiField'
+import { ImageField } from '@/components/ImageField'
 import Layout from '@/components/Layout'
 import { useGenerateResult } from '@/hooks/useGenerateResult'
-import { createAppSchema } from '@/server/api/schema'
+import { createAppSchema, formSchema } from '@/server/api/schema'
 import { api, type RouterInputs } from '@/utils/api'
 import { isDev } from '@/utils/isDev'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -12,12 +12,13 @@ import { useState } from 'react'
 import { Controller, SubmitHandler, useForm } from 'react-hook-form'
 import { toast } from 'react-hot-toast'
 import Head from 'next/head'
+import { FileField } from '@/components/FileField'
+import { uploadFile, uploadImage } from '@/server/manager'
+import { filepath } from 'prettier.config.cjs'
 
 type Inputs = RouterInputs['app']['create']
 
 const NewApp = () => {
-  const [isTesting, setIsTesting] = useState(false)
-  const [hasTested, setHasTested] = useState(false)
   const { generate, generatedResults } = useGenerateResult()
   const router = useRouter()
   const {
@@ -26,61 +27,58 @@ const NewApp = () => {
     control,
     trigger,
     getValues,
+    setValue,
     formState: { errors },
-  } = useForm<Inputs>({ resolver: zodResolver(createAppSchema) })
+  } = useForm({ resolver: zodResolver(formSchema) })
 
-  const handleTest = async (e: any) => {
-    if (isTesting) {
-      return
-    }
-
-    const allValid = await trigger()
-    if (allValid) {
-      const formValues = getValues()
-
-      setIsTesting(true)
-
-      await generate({
-        prompt: formValues.prompt,
-        userInput: formValues.demoInput,
-      })
-
-      setIsTesting(false)
-      setHasTested(true)
-    }
-  }
 
   const mutation = api.app.create.useMutation({
     onSuccess: (data, variables, context) => {
+      console.log('onSuccess');
       router.push(`/app/${data.id}`)
     },
     onError: () => {
+      console.log('onError');
       console.log('on error')
     },
   })
 
   const { isLoading: isCreating } = mutation
 
-  const onSubmit: SubmitHandler<Inputs> = (data) => {
-    if (!isDev && !hasTested) {
-      toast('提交之前请进行测试', { icon: '🙇' })
-    } else {
-      mutation.mutate(data)
+  const onSubmit: SubmitHandler<any> = async (data) => {
+    try {
+      const [filePath, coverImage] = await Promise.all(
+        [
+          uploadFile(data.fileData),
+          uploadImage(data.imageData)
+        ]
+      );
+      const dd = { ...data, "filePath": filePath, 'coverImage': coverImage };
+      mutation.mutate(dd);
+    } catch (e) {
+      console.log(e);
+    } finally {
+      console.log("finally");
     }
   }
+
+  // const handleMutiFieldChange: (newValues: any) => {
+  //   // setValue('coverImage', newValues.coverImage);
+  //   // setValue('imageContent', newValues.imageContent);
+  // }
 
   return (
     <Layout>
       <div>
-        <Breadcrumb pages={[{ name: '创建应用', href: '#', current: true }]} />
+        <Breadcrumb pages={[{ title: '上传脚本', href: '#', current: true }]} />
         <Head>
-          <title>创建应用</title>
+          <title>上传脚本</title>
           <link rel="icon" href="/favicon.png" />
         </Head>
         <div className="bg-slate-50 pt-10">
           <div className="mx-auto min-h-screen max-w-xl ">
             <h1 className="py-10 text-center text-2xl font-semibold text-gray-900">
-              创建应用
+              上传脚本
             </h1>
             <form className=" space-y-6" onSubmit={handleSubmit(onSubmit)}>
               <div className="bg-white px-4 py-5 shadow sm:rounded-lg sm:p-6">
@@ -88,55 +86,71 @@ const NewApp = () => {
                   <div className="grid grid-cols-3 gap-6">
                     <div className="col-span-3 sm:col-span-2">
                       <label className="block text-sm font-medium leading-6 text-gray-900">
-                        Icon
+                        上传脚本封面图
                       </label>
                       <Controller
-                        name="icon"
+                        name="imageData"
                         control={control}
-                        defaultValue="🤖"
                         render={({ field }) => (
-                          <EmojiField
-                            value={field.value}
-                            onChange={(value) => field.onChange(value)}
-                          />
+                          <ImageField
+                            // value={''}
+                            onChange={(value) => {
+                              field.onChange(value);
+
+                            }} />
                         )}
                       />
                       <p className="mt-2 text-sm text-red-500">
-                        {errors.icon && errors.icon.message}
+                        {/* {errors.coverImage && errors.coverImage.message} */}
                       </p>
                       <p className="mt-2 text-sm text-gray-500">
-                        挑选一个 emoji 作为应用的图标吧！
+                        拖动或点击上传脚本封面图
                       </p>
+                    </div>
+                  </div>
+                  <div className='grid grid-cols-3 gap-6'>
+                    <div className='col-span-3 sm:col-span-2'>
+                      <label className='block text-sm font-medium leading-6 text-gray-900'>
+                        上传脚本文件
+                      </label>
+                      <Controller name='fileData'
+                        control={control}
+                        render={({ field }) => (
+                          <FileField
+                            value={''}
+                            onChange={(value) => field.onChange(value)}
+                          />
+                        )} />
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-6">
                     <div className="col-span-3 sm:col-span-2">
                       <label className="block text-sm font-medium leading-6 text-gray-900">
-                        应用名称
+                        脚本名称
                       </label>
                       <div className="mt-2 flex rounded-md shadow-sm">
                         <input
                           type="text"
                           className="block w-full flex-1 rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                          placeholder="智能翻译助手"
-                          {...register('name')}
+                          placeholder="基础视频卡脚本"
+                          {...register('title')}
                         />
                       </div>
                       <p className="mt-2 text-sm text-red-500">
-                        {errors.name && errors.name.message}
+                        {errors.title && errors.title.message}
                       </p>
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-6">
                     <div className="col-span-3 sm:col-span-2">
                       <label className="block text-sm font-medium leading-6 text-gray-900">
-                        应用描述
+                        脚本描述
                       </label>
                       <div className="mt-2">
                         <textarea
                           rows={3}
                           className="block w-full rounded-md border-0 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:py-1.5 sm:text-sm sm:leading-6"
-                          placeholder="这款 App 可以将任意语言的内容，翻译成中文"
+                          placeholder="此脚本可以调起基础视频聊天组件，并控制视频聊天当中某些功能"
                           defaultValue={''}
                           {...register('description')}
                         />
@@ -149,13 +163,13 @@ const NewApp = () => {
                   <div className="grid grid-cols-3 gap-6">
                     <div className="col-span-3 sm:col-span-2">
                       <label className="block text-sm font-medium leading-6 text-gray-900">
-                        指令
+                        脚本设置
                       </label>
                       <div className="mt-2 flex rounded-md shadow-sm">
                         <textarea
                           rows={3}
                           className="block w-full rounded-md border-0 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:py-1.5 sm:text-sm sm:leading-6"
-                          placeholder="你是一个翻译官，无论接下来输入什么，你都要翻译成中文。内容是："
+                          placeholder="暴露给脚本使用者的设置参数，默认空"
                           defaultValue={''}
                           {...register('prompt')}
                         />
@@ -164,21 +178,20 @@ const NewApp = () => {
                         {errors.prompt && errors.prompt.message}
                       </p>
                       <p className="mt-2 text-sm text-gray-500">
-                        指令需清晰易懂，明确且有逻辑。让 ChatGpt
-                        化身你的小帮手吧。
+                        此设置会暴露给使用者，以便控制脚本中某些参数。
                       </p>
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-6">
                     <div className="col-span-3 sm:col-span-2">
                       <label className="block text-sm font-medium leading-6 text-gray-900">
-                        示例输入
+                        启动入口方法
                       </label>
                       <div className="mt-2 flex rounded-md shadow-sm">
                         <input
                           type="text"
                           className="block w-full flex-1 rounded-md border-0 py-1.5 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-                          placeholder="I love you three thousand times."
+                          placeholder="默认applyAction()"
                           {...register('demoInput')}
                         />
                       </div>
@@ -195,49 +208,17 @@ const NewApp = () => {
                   color="white"
                   onClick={() => router.push('/')}
                 >
-                  Cancel
+                  取消
                 </Button>
-                <Button
-                  type="button"
-                  variant="solid"
-                  color="slate"
-                  onClick={handleTest}
-                  loading={isTesting}
-                >
-                  测试
-                </Button>
+
                 <Button
                   variant="solid"
                   color="blue"
                   type="submit"
-                  loading={isCreating}
+                  loading={isCreating ? "true" : undefined}
                 >
-                  创建
+                  上传
                 </Button>
-              </div>
-              <div className="my-10 w-full space-y-10">
-                {generatedResults && (
-                  <div className="flex flex-col gap-8">
-                    <h2 className="mx-auto text-3xl font-bold text-slate-900 sm:text-4xl">
-                      结果
-                    </h2>
-                    <div className="flex w-full flex-col items-center justify-center space-y-8">
-                      <div
-                        className="w-full cursor-copy rounded-xl border bg-white p-4 shadow-md transition hover:bg-gray-100"
-                        onClick={() => {
-                          navigator.clipboard.writeText(generatedResults)
-                          toast('Result copied to clipboard', {
-                            icon: '✂️',
-                          })
-                        }}
-                      >
-                        <p className="whitespace-pre-line text-left">
-                          {generatedResults}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             </form>
           </div>

@@ -11,7 +11,7 @@ datasource db {
     // Further reading:
     // https://next-auth.js.org/adapters/prisma#create-the-prisma-schema
     // https://www.prisma.io/docs/reference/api-reference/prisma-schema-reference#string
-    url          = "mysql://js_li:1234@localhost:3306/database"
+    url          = "mysql://js_li:1234@localhost:3306/database?port=5555"
     relationMode = "prisma"
 }
 
@@ -68,12 +68,15 @@ datasource db {
 
 model OpenGptApp {
     id          String  @id @default(cuid())
-    name        String  @unique
-    description String
-    icon        String // for example emoji
+    title       String  @unique
+    description String  @db.Text
+    coverImage  String  @db.Text // for example emoji
     hint        String?
-    demoInput   String  @db.VarChar(1000)
-    prompt      String  @db.VarChar(10000)
+    demoInput   String  @db.Text
+    prompt      String  @db.Text
+    filePath    String  @db.Text
+    fileContent String  @db.Text
+    owner       String  @db.Text
     usedCount   BigInt  @default(1)
 
     createdAt DateTime @default(now())

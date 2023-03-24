@@ -7,7 +7,7 @@ import { z } from 'zod'
 export const openGptAppRouter = createTRPCRouter({
   getAll: publicProcedure.query(({ ctx }) => {
     return ctx.prisma.openGptApp.findMany({
-      select: { id: true, name: true, description: true, icon: true },
+      select: { id: true, title: true, description: true, coverImage: true, filePath: true },
       orderBy: { usedCount: 'desc' },
     })
   }),
@@ -16,11 +16,14 @@ export const openGptAppRouter = createTRPCRouter({
       where: { id },
       select: {
         id: true,
-        name: true,
+        title: true,
         description: true,
-        icon: true,
+        coverImage: true,
         demoInput: true,
         hint: true,
+        filePath: true,
+        fileContent: true,
+        owner: true,
       },
     })
   }),
@@ -54,22 +57,32 @@ export const openGptAppRouter = createTRPCRouter({
     .mutation(async ({ input, ctx }) => {
       const v = await ctx.prisma.openGptApp.create({
         data: {
-          name: input.name,
+          title: input.title,
           description: input.description,
-          icon: input.icon,
+          coverImage: input.coverImage,
           demoInput: input.demoInput,
           prompt: input.prompt,
+          filePath: input.filePath,
+          fileContent: "",
+          owner: "",
         },
       })
-
-      await sendMessageToDiscord({
-        id: v.id,
-        name: v.name,
-        description: v.description,
-      })
+      // await sendMessageToDiscord({
+      //   id: v.id,
+      //   name: v.title,
+      //   description: v.description,
+      // })
 
       // no need to wait
-      revalidateHome()
+      // revalidateHome()
       return v
+    }),
+  delete: publicProcedure
+    .input(z.string())
+    .mutation(async ({ input: id, ctx }) => {
+      const deletedApp = await ctx.prisma.openGptApp.delete({
+        where: { id },
+      });
+      return { success: true, deletedApp, id: id };
     }),
 })
